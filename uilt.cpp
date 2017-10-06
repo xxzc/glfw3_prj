@@ -9,6 +9,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <vector>
 using namespace std;
 
 void filetoString(const char* fname, string& str){
@@ -192,6 +196,7 @@ void Camera::walk(float dx, float dy){
     pos += dx * front + dy * left;
     updateTrans();
 }
+
 void Camera::rotate(float dyaw, float dpitch){
     yaw += dyaw;
     pitch += dpitch;
@@ -220,6 +225,7 @@ void Camera::lookat(float x, float y, float z)
     up = glm::normalize(glm::cross(front, left));
     updateTrans();
 }
+
 void ovec3(glm::vec3 v){
     cout <<v.x<<" "<<v.y<<" "<<v.z<<endl;
 }
@@ -229,3 +235,95 @@ void Camera::updateTrans()
     trans = glm::lookAt(pos, pos+front, up);
 }
 
+Model::Model(const char *path)
+{
+    Assimp::Importer imp;
+    scene = imp.ReadFile(path, aiProcess_Triangulate);
+    if(!scene || !scene->mRootNode){
+        cerr << "Model Import Fail: " << imp.GetErrorString() << endl;
+        return;
+    }
+    for(unsigned int i = 0; i<scene->mNumMeshes;i++){
+        DOUT("mesh#"<<i);
+        loadMesh(scene->mMeshes[i]);
+    }
+}
+
+void Model::drawInit()
+{
+    for(uint p = 0; p<m.size(); p++)
+        m[p].drawInit();
+}
+
+void Model::draw()
+{
+    for(uint p = 0; p<m.size(); p++)
+        m[p].draw();
+}
+
+void Model::loadMesh(aiMesh* mesh)
+{
+    vector<Vertex> v(mesh->mNumVertices);
+    vector<GLuint> i;
+    for(unsigned int p = 0; p<mesh->mNumVertices;p++){
+        Vertex vertex;
+        vertex.pos = glm::vec3(mesh->mVertices[p].x, mesh->mVertices[p].y, mesh->mVertices[p].z);
+        vertex.norm = glm::vec3(mesh->mNormals[p].x, mesh->mNormals[p].y, mesh->mNormals[p].z);
+        v[p] = vertex;
+        DOUT("\tV#"<<p<<" "<<glm::to_string(vertex.pos)<<" "<<glm::to_string(vertex.norm));
+    }
+    for(unsigned int p = 0; p<mesh->mNumFaces; p++){
+        aiFace& face = mesh->mFaces[p];
+        DOUTN("\tFace#"<<p<<":"<<face.mNumIndices<<"\n\t\t");
+        assert(face.mNumIndices == 3);
+        for(unsigned int q = 0; q<face.mNumIndices; q++){
+            i.push_back(face.mIndices[q]);
+            DOUTN(face.mIndices[q]<<" ");
+        }
+        DOUT("");
+    }
+    m.push_back(Mesh(v, i));
+}
+
+TextureCubeMap::TextureCubeMap(const char* paths[6])
+{
+    glGenTextures(1, &texid);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
+    for(int i=0;i<6;i++){
+        int w, h, nch;
+        stbi_set_flip_vertically_on_load(0);
+        unsigned char* data = stbi_load(paths[i], &w, &h, &nch, 0);
+        if(!data){
+            cerr << "Error loading "<<paths[i]<<endl;
+            return;
+        }
+        GLenum fmt = nch==3?GL_RGB:GL_RGBA;
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, fmt,
+                     w, h, 0, fmt, GL_UNSIGNED_BYTE, data);
+        stbi_image_free(data);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(boxv), boxv, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), NULL);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+}
+
+void TextureCubeMap::draw(GLuint unit)
+{
+    glDepthMask(GL_FALSE);
+    glActiveTexture(GL_TEXTURE0+unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
+    glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDepthMask(GL_TRUE);
+}

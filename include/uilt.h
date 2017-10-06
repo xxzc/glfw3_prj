@@ -5,7 +5,9 @@
 #include <string>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-
+#include <vector>
+#include <assimp/scene.h>
+#include <vector>
 #ifdef debug
 #define DOUT(x) do { std::cout << x << std::endl; } while( false )
 #define DOUTN(x) do { std::cout << x; } while( false )
@@ -71,4 +73,105 @@ public:
     void lookat(float x, float y, float z);
 };
 
+
+struct Vertex
+{
+    glm::vec3 pos;
+    glm::vec3 norm;
+};
+
+class Mesh
+{
+public:
+    GLuint VAO, VBO, EBO;
+    std::vector<Vertex> v;
+    std::vector<GLuint> i;
+    Mesh(std::vector<Vertex>& pv, std::vector<GLuint>& pi):v(pv),i(pi){}
+    void genBuf(){}
+    void drawInit(){
+        glGenVertexArrays(1, &VAO);
+        glBindVertexArray(VAO);
+            glGenBuffers(1, &VBO);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*v.size(), v.data(), GL_STATIC_DRAW);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+                glEnableVertexAttribArray(0);
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, norm));
+                glEnableVertexAttribArray(1);
+            glGenBuffers(1, &EBO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*i.size(), i.data(), GL_STATIC_DRAW);
+        glBindVertexArray(0);
+    }
+    void draw(){
+        glBindVertexArray(VAO);
+            glDrawElements(GL_TRIANGLES, i.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+    }
+
+};
+class Model
+{
+public:
+    std::vector<Mesh> m;
+    const aiScene* scene;
+    void loadMesh(aiMesh* mesh);
+public:
+    Model(const char* path);
+    void drawInit();
+    void draw();
+};
+
+class TextureCubeMap
+{
+    GLuint texid;
+    GLuint VAO, VBO;
+    float boxv[36*3] {
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+public:
+    TextureCubeMap(const char* paths[6]);
+    GLuint getID(){return texid;}
+    void draw(GLuint unit);
+};
 #endif
