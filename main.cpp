@@ -1,6 +1,5 @@
 #include <iostream>
 #include <uilt.h>
-#include <string>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -10,13 +9,30 @@
 
 using namespace std;
 
+void fpsstat(double ttime){
+    static double mark = -1.0;
+    static int nframe;
+    nframe++;
+    if(mark < 0) mark = ttime;
+    if(ttime-mark > 1.0){
+        double fps = double(nframe)/(ttime-mark);
+        double ftime = 1000.0/fps;
+        nframe = 0;
+        mark = ttime;
+        cout << "Fps: "<<fps<<" avg "<<ftime<<"ms"<<endl;
+    }
+}
+
 void processInput(GLFWwindow* window, Camera& camera);
+void mouseCallback(GLFWwindow* window, double x, double y);
+
 int main()
 {
-    AppGL app("AppGL APP", 800, 600);
+    AppGL app("AppGL APP", 1700, 1000);
     GLFWwindow* window = app.getWindow();
-
-    Texture texture1("data/wall.jpg");
+    Camera camera(0.0f, 0.0f, -5.0f);
+    glfwSetCursorPosCallback(window, mouseCallback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     Shader shader("data/shader.v", "data/shader.f");
     Shader cubeShader("data/cube.v", "data/cube.f");
@@ -28,7 +44,6 @@ int main()
     };
     TextureCubeMap cube(skyboxpic);
     shader.useProgram();
-    shader.setUniform1i("texture1", 0);
     shader.setUniform1i("box", 0);
 
     cubeShader.useProgram();
@@ -39,15 +54,19 @@ int main()
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     int f=0;
-    Camera camera(0.0f, 0.0f, -5.0f);
+
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
+    double ptime, ttime = glfwGetTime();
     while (!glfwWindowShouldClose(window))
     {
+        ptime = ttime;
+        ttime = glfwGetTime();
+        fpsstat(ttime);
         processInput(window, camera);
 
         glm::mat4 model, view, proj;
-        model = glm::rotate(model, (float)glfwGetTime()*0.5f, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, (float)ttime*0.1f, glm::vec3(0.0f, 1.0f, 0.0f));
         //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
         view = camera.trans;
         int w,h;
@@ -63,7 +82,6 @@ int main()
         cube.draw(0);
 
         shader.useProgram();
-        texture1.enableOn(0);
         shader.setUniform3fv("cam", glm::value_ptr(camera.pos));
         GLfloat light[] = {-2.0f, 2.0f, 3.0f};
         shader.setUniform3fv("light", light);
@@ -79,9 +97,24 @@ int main()
     }
 
 }
+void mouseCallback(GLFWwindow* window, double x, double y)
+{
+    (void*) window;
+    static double ox, oy;
+    static bool inited = false;
+    if(!inited){
+        ox = x;
+        oy = y;
+        inited = true;
+    }
+    float xscale = -0.005,yscale = -0.005;
+    Camera::getCamera().rotate(xscale*float(x-ox), yscale*float(y-oy));
+    ox = x;
+    oy = y;
+}
 void processInput(GLFWwindow* window, Camera& camera)
 {
-    float ds = 0.1f, dr = 0.1f;
+    float ds = 0.1f, dr = 0.03f;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)

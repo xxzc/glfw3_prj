@@ -58,8 +58,8 @@ public:
 
 class Camera
 {
-
     void updateTrans();
+    static Camera* inst;
 public:
     glm::vec3 pos;
     float yaw, pitch;//lr,ud
@@ -71,6 +71,7 @@ public:
     void rotate(float dyaw, float dpitch);
     void go(float x, float y, float z);
     void lookat(float x, float y, float z);
+    static Camera& getCamera(){return *inst;}
 };
 
 
@@ -126,7 +127,7 @@ class TextureCubeMap
 {
     GLuint texid;
     GLuint VAO, VBO;
-    float boxv[36*3] {
+    float boxv[36*3] = {
         -1.0f,  1.0f, -1.0f,
         -1.0f, -1.0f, -1.0f,
          1.0f, -1.0f, -1.0f,

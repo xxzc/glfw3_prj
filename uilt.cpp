@@ -176,8 +176,11 @@ void Texture::enableOn(unsigned int unit)
     glBindTexture(GL_TEXTURE_2D, texid);
 }
 
+Camera* Camera::inst = NULL;
+
 Camera::Camera()
 {
+    inst = this;
     pos = glm::vec3(0.0f, 0.0f, 0.0f);
     yaw = 0.0f, pitch = 0.0f;
     front = glm::vec3(0.0f, 0.0f, 1.0f);
