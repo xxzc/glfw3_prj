@@ -35,19 +35,11 @@ int main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     Shader shader("data/shader.v", "data/shader.f");
-    Shader cubeShader("data/cube.v", "data/cube.f");
+    shader.setUniform1i("eqtex", 0);
 
-    const char* skyboxpic[6] = {
-        "data/skybox/right.jpg", "data/skybox/left.jpg",
-        "data/skybox/top.jpg", "data/skybox/bottom.jpg",
-        "data/skybox/back.jpg", "data/skybox/front.jpg"
-    };
-    TextureCubeMap cube(skyboxpic);
+    EQMap eqmap("data/eq.jpg");
     shader.useProgram();
-    shader.setUniform1i("box", 0);
 
-    cubeShader.useProgram();
-    cubeShader.setUniform1i("box", 0);
     if(shader.isFailed()) return -1;
     Model m("data/model.dae");
     m.drawInit();
@@ -76,10 +68,7 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        cubeShader.useProgram();
-        cubeShader.setUniformMatrix4fv("view", glm::value_ptr(view));
-        cubeShader.setUniformMatrix4fv("proj", glm::value_ptr(proj));
-        cube.draw(0);
+        eqmap.draw(view, proj);
 
         shader.useProgram();
         shader.setUniform3fv("cam", glm::value_ptr(camera.pos));

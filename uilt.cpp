@@ -7,6 +7,7 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <assimp/Importer.hpp>
@@ -40,7 +41,7 @@ Shader::Shader(const char* vShaderPath, const char* fShaderPath)
     glGetShaderiv(vShader, GL_COMPILE_STATUS, &compileStatus);
     if(compileStatus != GL_TRUE){
         glGetShaderInfoLog(vShader, sizeof(compileError), NULL, compileError);
-        cerr << "vShader Error:" << endl;
+        cerr << "vShader  "<<vShaderPath<<" Error:" << endl;
         cerr << compileError;
         pFailed = true;
         return;
@@ -52,7 +53,7 @@ Shader::Shader(const char* vShaderPath, const char* fShaderPath)
     glGetShaderiv(fShader, GL_COMPILE_STATUS, &compileStatus);
     if(compileStatus != GL_TRUE){
         glGetShaderInfoLog(fShader, sizeof(compileError), NULL, compileError);
-        cerr << "fShader Error:" << endl;
+        cerr << "fShader "<<fShaderPath<<" Error:" << endl;
         cerr << compileError;
         pFailed = true;
         return;
@@ -157,7 +158,7 @@ Texture::Texture(const char* fname)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    stbi_set_flip_vertically_on_load(true);
+    //stbi_set_flip_vertically_on_load(true);
     unsigned char* image = stbi_load(fname, &width, &height, &nChannels, 0);
     if(!image){
         cerr << "Err loading image";
@@ -204,8 +205,8 @@ void Camera::rotate(float dyaw, float dpitch){
     yaw += dyaw;
     pitch += dpitch;
     float halfpi = glm::pi<float>()/2.0f;
-    if(pitch > halfpi) pitch = halfpi;
-    if(pitch < -halfpi) pitch = -halfpi;
+    if(pitch > halfpi - 0.01f) pitch = halfpi - 0.01f;
+    if(pitch < -halfpi + 0.01f) pitch = -halfpi + 0.01f;
     glm::vec3 f;
     f.x = cos(pitch) * sin(yaw);
     f.y = sin(pitch);
@@ -326,6 +327,31 @@ void TextureCubeMap::draw(GLuint unit)
     glDepthMask(GL_FALSE);
     glActiveTexture(GL_TEXTURE0+unit);
     glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
+    glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDepthMask(GL_TRUE);
+}
+
+EQMap::EQMap(const char* path):eqshader("data/eq.v", "data/eq.f"), tex(path)
+{
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(boxv), boxv, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), NULL);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+}
+
+void EQMap::draw(const glm::mat4& view, const glm::mat4& proj, GLuint unit)
+{
+    glDepthMask(GL_FALSE);
+    eqshader.useProgram();
+    eqshader.setUniformMatrix4fv("view", glm::value_ptr(view));
+    eqshader.setUniformMatrix4fv("proj", glm::value_ptr(proj));
+    eqshader.setUniform1i("eqtex", unit);
+    tex.enableOn(unit);
     glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
     glDepthMask(GL_TRUE);

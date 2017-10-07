@@ -4,9 +4,15 @@ out vec4 fcolor;
 in vec3 wnormal;
 in vec3 wpos;
 
-uniform samplerCube box;
+uniform sampler2D eqtex;
 uniform vec3 cam;
 uniform vec3 light;
+
+vec4 eqtexure(sampler2D eqtex, vec3 dir)
+{
+    float pi = 3.1415926;
+    return texture(eqtex, vec2(atan(dir.x, dir.z)/2/pi+0.5, acos(dir.y)/pi));
+}
 
 void main()
 {
@@ -24,10 +30,11 @@ void main()
     vec3 reflectv = reflect(-lightv, norm);
     vec4 specular = scolor * pow(max(dot(camv, reflectv), 0.0), 25.6) * 1 * scolor * lightc;
 
-    vec4 skyreflect = texture(box, reflect(-camv, norm));
+    vec4 skyreflect = eqtexure(eqtex, reflect(-camv, norm));
     
     float frate=1.52;
-    vec4 skyrefract = texture(box, refract(-camv, norm, 1/frate));
+    vec4 skyrefract = eqtexure(eqtex, refract(-camv, norm, 1/frate));
 
     fcolor = ambient + 0.3*diffuse + specular + 0.5*skyreflect + 0.0*skyrefract;
 }
+
