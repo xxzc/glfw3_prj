@@ -30,7 +30,7 @@ int main()
 {
     AppGL app("AppGL APP", 1700, 1000);
     GLFWwindow* window = app.getWindow();
-    Camera camera(0.0f, 0.0f, -5.0f);
+    Camera camera(0.0f, 0.0f, -3.5f);
     glfwSetCursorPosCallback(window, mouseCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -43,7 +43,6 @@ int main()
     if(shader.isFailed()) return -1;
     Model m("data/model.dae");
     m.drawInit();
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     int f=0;
 
@@ -65,10 +64,11 @@ int main()
         glfwGetWindowSize(app.getWindow(), &w, &h);
         proj = glm::perspective(glm::radians(45.0f), float(w)/float(h), 0.1f, 100.0f);
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        //glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         eqmap.draw(view, proj);
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         shader.useProgram();
         shader.setUniform3fv("cam", glm::value_ptr(camera.pos));
@@ -125,5 +125,4 @@ void processInput(GLFWwindow* window, Camera& camera)
         camera.rotate(dr, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.rotate(-dr, 0.0f);
-
 }
