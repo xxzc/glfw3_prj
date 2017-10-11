@@ -41,7 +41,7 @@ int main()
     shader.useProgram();
 
     if(shader.isFailed()) return -1;
-    Model m("data/ball.dae");
+    Model m("data/model.dae");
     m.drawInit();
 
     int f=0;
